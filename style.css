@@ -10,14 +10,16 @@ body {
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    background: linear-gradient(135deg, #4a90e2, #b565d9);
+    /* Custom image background with gradient overlay */
+    background: linear-gradient(rgba(74, 144, 226, 0.6), rgba(181, 101, 217, 0.6)), 
+                url('background.jpg') no-repeat center center/cover;
     color: #333;
 }
 
 .container {
     max-width: 700px;
     width: 95%;
-    background: #fff;
+    background: rgba(255, 255, 255, 0.95); /* Slightly more opaque for readability */
     padding: 30px;
     border-radius: 15px;
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
