@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Hub</title>
+    <link rel="stylesheet" href="Page1.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Weather Hub</h1>
+        <div class="search-box">
+            <input type="text" id="cityInput" placeholder="Enter city name">
+            <button onclick="getWeather()">Get Weather</button>
+        </div>
+        <div class="error" id="error"></div>
+        <div class="loading" id="loading">Loading...</div>
+        <div class="weather-info" id="weatherInfo">
+            <h2 id="cityName"></h2>
+            <p id="temperature"></p>
+            <p id="description"></p>
+            <p id="humidity"></p>
+            <p id="wind"></p>
+        </div>
+    </div>
+
+    <script>
+        async function getWeather() {
+            const cityInput = document.getElementById('cityInput').value.trim();
+            const apiKey = 'bd5e378503939ddaee76f12ad7a97608'; // Your OpenWeatherMap API key
+            const url = `https://api.openweathermap.org/data/2.5/weather?q=${cityInput}&appid=${apiKey}&units=metric`;
+
+            const errorElement = document.getElementById('error');
+            const weatherInfoElement = document.getElementById('weatherInfo');
+            const loadingElement = document.getElementById('loading');
+
+            // Reset UI
+            errorElement.classList.remove('show');
+            weatherInfoElement.classList.remove('show');
+            loadingElement.classList.add('show');
+
+            if (!cityInput) {
+                errorElement.textContent = 'Please enter a city name.';
+                errorElement.classList.add('show');
+                loadingElement.classList.remove('show');
+                return;
+            }
+
+            try {
+                console.log('Fetching weather for:', cityInput);
+                console.log('API URL:', url.replace(apiKey, 'HIDDEN_FOR_LOG')); // Log URL without exposing API key
+                const response = await fetch(url);
+                console.log('Response status:', response.status);
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error('API Error:', errorData);
+                    if (response.status === 401) {
+                        throw new Error('Invalid API key. Please verify your API key.');
+                    } else if (response.status === 404) {
+                        throw new Error('City not found. Please check the city name.');
+                    } else if (response.status === 429) {
+                        throw new Error('API rate limit exceeded. Please wait a minute and try again.');
+                    } else {
+                        throw new Error(`API error: ${errorData.message || 'Unknown error'}`);
+                    }
+                }
+
+                const data = await response.json();
+                console.log('API Response:', data);
+
+                document.getElementById('cityName').textContent = `${data.name}, ${data.sys.country}`;
+                document.getElementById('temperature').textContent = `Temperature: ${data.main.temp}°C`;
+                document.getElementById('description').textContent = `Weather: ${data.weather[0].description}`;
+                document.getElementById('humidity').textContent = `Humidity: ${data.main.humidity}%`;
+                document.getElementById('wind').textContent = `Wind Speed: ${data.wind.speed} m/s`;
+
+                weatherInfoElement.classList.add('show');
+                loadingElement.classList.remove('show');
+            } catch (error) {
+                console.error('Error fetching weather:', error);
+                errorElement.textContent = error.message;
+                errorElement.classList.add('show');
+                loadingElement.classList.remove('show');
+                document.getElementById('cityInput').value = ''; // Clear input on error
+            }
+        }
+
+        // Allow pressing Enter to trigger weather fetch
+        document.getElementById('cityInput').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                getWeather();
+            }
+        });
+    </script>
+</body>
+</html>
