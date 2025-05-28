@@ -57,12 +57,17 @@ body.dark-mode h1 {
     flex-wrap: wrap;
 }
 
+.autocomplete-wrapper {
+    position: relative;
+    width: 50%;
+}
+
 input[type="text"] {
     padding: 12px;
     font-size: 1.1em;
     border: 2px solid #4a90e2;
     border-radius: 8px;
-    width: 50%;
+    width: 100%;
     outline: none;
     transition: border-color 0.3s, box-shadow 0.3s;
 }
@@ -70,6 +75,47 @@ input[type="text"] {
 input[type="text"]:focus {
     border-color: #b565d9;
     box-shadow: 0 0 8px rgba(181, 101, 217, 0.3);
+}
+
+.suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    max-height: 200px;
+    overflow-y: auto;
+    display: none;
+    z-index: 1000;
+    transition: background 0.3s;
+}
+
+body.dark-mode .suggestions {
+    background: #2c2c2c;
+    border-color: #444;
+}
+
+.suggestion-item {
+    padding: 10px;
+    font-size: 1em;
+    color: #333;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+body.dark-mode .suggestion-item {
+    color: #ddd;
+}
+
+.suggestion-item:hover {
+    background: #f0f0f0;
+}
+
+body.dark-mode .suggestion-item:hover {
+    background: #444;
 }
 
 button {
@@ -524,7 +570,7 @@ footer a:hover {
         font-size: 2.2em;
     }
 
-    input[type="text"] {
+    .autocomplete-wrapper {
         width: 100%;
     }
 
