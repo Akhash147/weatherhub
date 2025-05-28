@@ -6,7 +6,6 @@
     <meta name="description" content="WeatherHub - Check current weather and 5-day forecast for any city. Features geolocation, dark mode, and a helpful chatbot.">
     <meta name="keywords" content="weather, forecast, current weather, geolocation, dark mode, chatbot">
     <meta name="author" content="Akhash">
-    <!-- Open Graph Meta Tags for Social Sharing -->
     <meta property="og:title" content="WeatherHub - Your Weather Companion">
     <meta property="og:description" content="Get current weather and 5-day forecasts for any city with WeatherHub. Features geolocation, dark mode, and a chatbot.">
     <meta property="og:image" content="https://akhash147.github.io/weatherhub/background.jpg">
@@ -17,13 +16,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
-    <!-- Favicon (replace with your own favicon file) -->
     <link rel="icon" type="image/png" href="favicon.png">
-    <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <!-- Dark Mode Toggle -->
     <button class="dark-mode-toggle" onclick="toggleDarkMode()" title="Toggle Dark Mode" tabindex="0">
         <span class="dark-mode-icon">🌙</span>
     </button>
@@ -31,7 +27,10 @@
     <div class="container">
         <h1>WeatherHub</h1>
         <div class="search-box">
-            <input type="text" id="cityInput" placeholder="Enter city name" tabindex="0">
+            <div class="autocomplete-wrapper">
+                <input type="text" id="cityInput" placeholder="Enter city name" tabindex="0" oninput="debouncedShowSuggestions()" autocomplete="off">
+                <div class="suggestions" id="suggestions"></div>
+            </div>
             <button onclick="getWeather()" tabindex="0">Get Weather</button>
             <button onclick="getWeatherByLocation()" class="geo-button" title="Get weather for your location" tabindex="0">
                 <span>📍</span> Use My Location
@@ -39,7 +38,6 @@
         </div>
         <div class="error" id="error"></div>
         <div class="loading" id="loading">Loading...</div>
-        <!-- Weather Alerts -->
         <div class="weather-alert" id="weatherAlert"></div>
         <div class="weather-info" id="weatherInfo">
             <div class="weather-header">
@@ -52,12 +50,10 @@
                 <p id="humidity"><span class="icon">💧</span></p>
                 <p id="wind"><span class="icon">💨</span></p>
             </div>
-            <!-- 5-Day Forecast -->
             <div class="forecast" id="forecast">
                 <h3>5-Day Forecast</h3>
                 <div class="forecast-container" id="forecastContainer"></div>
             </div>
-            <!-- Temperature Trend Chart -->
             <div class="chart-container">
                 <h3>Temperature Trend (5 Days)</h3>
                 <canvas id="tempChart"></canvas>
@@ -65,7 +61,6 @@
         </div>
     </div>
 
-    <!-- Chatbot UI -->
     <div class="chatbot-container">
         <div class="chatbot-toggle" onclick="toggleChatbot()" tabindex="0">
             <span>💬</span> Chat Support
@@ -85,22 +80,137 @@
         </div>
     </div>
 
-    
-    <script>
-        let tempChart = null; // Global variable for Chart.js instance
+    <footer>
+        Weather data provided by <a href="https://openweathermap.org" target="_blank">OpenWeatherMap</a> | Built by <a href="https://github.com/Akhash147" target="_blank">Akhash</a>
+    </footer>
 
-        // Load dark mode preference from localStorage
-        if (localStorage.getItem('darkMode') === 'enabled') {
-            document.body.classList.add('dark-mode');
-            document.querySelector('.dark-mode-icon').textContent = '☀️';
+    <script>
+        let tempChart = null;
+        let cities = [];
+
+        // Fallback list of cities (in case the dataset fails to load)
+        const fallbackCities = [
+            "London", "Paris", "New York", "Tokyo", "Mumbai", "Sydney",
+            "Toronto", "Berlin", "Rome", "Moscow", "Dubai", "Singapore",
+            "Los Angeles", "Chicago", "Miami", "Bangkok", "Seoul", "Beijing",
+            "Cape Town", "Rio de Janeiro", "Amsterdam", "Vienna", "Stockholm",
+            "Delhi", "Kolkata", "Chennai", "Bangalore", "Hyderabad",
+            "San Francisco", "Boston", "Seattle", "Washington", "Houston",
+            "Vancouver", "Montreal", "Mexico City", "Sao Paulo", "Buenos Aires",
+            "Lima", "Bogota", "Santiago", "Caracas", "Quito",
+            "Madrid", "Barcelona", "Lisbon", "Dublin", "Oslo",
+            "Helsinki", "Copenhagen", "Prague", "Budapest", "Warsaw",
+            "Athens", "Istanbul", "Kyiv", "Bucharest", "Belgrade",
+            "Shanghai", "Hong Kong", "Jakarta", "Manila", "Kuala Lumpur",
+            "Ho Chi Minh City", "Hanoi", "Taipei", "Dhaka", "Karachi",
+            "Lahore", "Islamabad", "Colombo", "Kathmandu", "Yangon",
+            "Cairo", "Lagos", "Nairobi", "Johannesburg", "Accra",
+            "Algiers", "Casablanca", "Tunis", "Addis Ababa", "Dar es Salaam",
+            "Sydney", "Melbourne", "Brisbane", "Perth", "Auckland",
+            "Wellington", "Christchurch", "Honolulu", "Suva", "Port Moresby",
+            "Riyadh", "Jeddah", "Doha", "Kuwait City", "Abu Dhabi",
+            "Amman", "Beirut", "Tehran", "Baghdad", "Ankara"
+        ];
+
+        // Load cities from localStorage or fetch from CDN
+        async function loadCities() {
+            const storedCities = localStorage.getItem('cityList');
+            if (storedCities) {
+                cities = JSON.parse(storedCities);
+                return;
+            }
+
+            try {
+                // Using a CDN-hosted world-cities dataset (~40,000 cities)
+                const response = await fetch('https://raw.githubusercontent.com/lutangar/cities.json/master/cities.json');
+                if (!response.ok) throw new Error('Failed to fetch city list.');
+                
+                const data = await response.json();
+                // Extract city names (data is an array of objects with 'name' and 'country' fields)
+                cities = data.map(city => city.name).filter(name => name); // Remove any undefined/null names
+                cities = [...new Set(cities)]; // Remove duplicates
+                cities.sort(); // Sort alphabetically
+
+                // Store in localStorage for future use
+                localStorage.setItem('cityList', JSON.stringify(cities));
+            } catch (error) {
+                console.error('Error loading cities:', error);
+                cities = fallbackCities; // Use fallback list if fetch fails
+            }
         }
+
+        // Debounce function to limit how often showSuggestions is called
+        function debounce(func, delay) {
+            let timeoutId;
+            return function (...args) {
+                clearTimeout(timeoutId);
+                timeoutId = setTimeout(() => func.apply(this, args), delay);
+            };
+        }
+
+        // Show suggestions with a limit of 10 matches
+        function showSuggestions() {
+            const input = document.getElementById('cityInput').value.trim().toLowerCase();
+            const suggestionsContainer = document.getElementById('suggestions');
+            suggestionsContainer.innerHTML = '';
+
+            if (!input) {
+                suggestionsContainer.style.display = 'none';
+                return;
+            }
+
+            // Filter cities (case-insensitive, starts with input)
+            const filteredCities = cities.filter(city => city.toLowerCase().startsWith(input));
+            const limitedCities = filteredCities.slice(0, 10); // Limit to 10 suggestions
+
+            if (limitedCities.length === 0) {
+                suggestionsContainer.style.display = 'none';
+                return;
+            }
+
+            limitedCities.forEach(city => {
+                const suggestionItem = document.createElement('div');
+                suggestionItem.classList.add('suggestion-item');
+                suggestionItem.textContent = city;
+                suggestionItem.onclick = () => {
+                    document.getElementById('cityInput').value = city;
+                    suggestionsContainer.innerHTML = '';
+                    suggestionsContainer.style.display = 'none';
+                    getWeather();
+                };
+                suggestionsContainer.appendChild(suggestionItem);
+            });
+
+            suggestionsContainer.style.display = 'block';
+        }
+
+        // Debounced version of showSuggestions
+        const debouncedShowSuggestions = debounce(showSuggestions, 300);
+
+        document.addEventListener('click', (e) => {
+            const suggestionsContainer = document.getElementById('suggestions');
+            const cityInput = document.getElementById('cityInput');
+            if (!cityInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+                suggestionsContainer.style.display = 'none';
+            }
+        });
+
+        // Load cities when the page loads
+        window.onload = async () => {
+            await loadCities();
+            // Load dark mode preference after cities are loaded
+            if (localStorage.getItem('darkMode') === 'enabled') {
+                document.body.classList.add('dark-mode');
+                document.querySelector('.dark-mode-icon').textContent = '☀️';
+            }
+        };
 
         function toggleDarkMode() {
             document.body.classList.toggle('dark-mode');
             const isDarkMode = document.body.classList.contains('dark-mode');
             document.querySelector('.dark-mode-icon').textContent = isDarkMode ? '☀️' : '🌙';
             localStorage.setItem('darkMode', isDarkMode ? 'enabled' : 'disabled');
-            updateChartTheme(); // Update chart colors for dark mode
+            updateChartTheme();
         }
 
         async function getWeather(city = null, lat = null, lon = null) {
@@ -145,7 +255,6 @@
                 document.getElementById('humidity').innerHTML = `<span class="icon">💧</span> Humidity: ${data.main.humidity}%`;
                 document.getElementById('wind').innerHTML = `<span class="icon">💨</span> Wind Speed: ${data.wind.speed} m/s`;
 
-                // Check for weather alerts
                 let alertMessage = '';
                 if (data.main.temp > 40) alertMessage = '⚠️ Extreme Heat Warning: Temperature exceeds 40°C!';
                 else if (data.main.temp < 0) alertMessage = '⚠️ Freezing Warning: Temperature below 0°C!';
@@ -158,7 +267,6 @@
                 weatherInfoElement.classList.add('show');
                 loadingElement.classList.remove('show');
 
-                // Fetch 5-day forecast
                 await getForecast(data.name);
                 return data;
             } catch (error) {
@@ -174,7 +282,7 @@
             const apiKey = 'bd5e378503939ddaee76f12ad7a97608';
             const url = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${apiKey}&units=metric`;
             const forecastContainer = document.getElementById('forecastContainer');
-            forecastContainer.innerHTML = ''; // Clear previous forecast
+            forecastContainer.innerHTML = '';
 
             try {
                 const response = await fetch(url);
@@ -185,8 +293,7 @@
                 const temperatures = [];
                 const dates = [];
 
-                // Process data to get one entry per day (e.g., at 12:00)
-                for (let i = 0; i < data.list.length; i += 8) { // 8 entries per day (3-hour intervals)
+                for (let i = 0; i < data.list.length; i += 8) {
                     const entry = data.list[i];
                     const date = new Date(entry.dt * 1000).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
                     dailyData.push({
@@ -199,7 +306,6 @@
                     dates.push(date);
                 }
 
-                // Display forecast cards
                 dailyData.forEach(day => {
                     const forecastCard = document.createElement('div');
                     forecastCard.classList.add('forecast-card');
@@ -212,7 +318,6 @@
                     forecastContainer.appendChild(forecastCard);
                 });
 
-                // Update temperature trend chart
                 updateTemperatureChart(dates, temperatures);
             } catch (error) {
                 console.error('Error fetching forecast:', error);
@@ -223,7 +328,6 @@
             const ctx = document.getElementById('tempChart').getContext('2d');
             const isDarkMode = document.body.classList.contains('dark-mode');
 
-            // Destroy existing chart if it exists
             if (tempChart) tempChart.destroy();
 
             tempChart = new Chart(ctx, {
@@ -284,7 +388,7 @@
             const weatherInfoElement = document.getElementById('weatherInfo');
             if (weatherInfoElement.classList.contains('show')) {
                 const city = document.getElementById('cityName').textContent.split(',')[0];
-                getForecast(city); // Redraw chart with updated theme
+                getForecast(city);
             }
         }
 
@@ -317,7 +421,6 @@
             }
         });
 
-        // Chatbot functionality
         function toggleChatbot() {
             const chatbotWindow = document.getElementById('chatbotWindow');
             chatbotWindow.classList.toggle('show');
@@ -342,7 +445,7 @@
             input.value = '';
 
             if (userMessage.includes('how do i use') || userMessage.includes('help')) {
-                addMessage('To use WeatherHub, enter a city name and click "Get Weather" or press Enter. You can also click "Use My Location" to get weather for your current location. The app shows current weather, a 5-day forecast, and a temperature trend chart. Toggle dark mode with the button in the top-right corner.', true);
+                addMessage('To use WeatherHub, start typing a city name in the search bar to see suggestions, then click "Get Weather" or press Enter. You can also click "Use My Location" to get weather for your current location. The app shows current weather, a 5-day forecast, and a temperature trend chart. Toggle dark mode with the button in the top-right corner.', true);
             } else if (userMessage.includes('what data') || userMessage.includes('what information')) {
                 addMessage('The app displays the city name, country, temperature (°C), weather description, humidity (%), wind speed (m/s), a 5-day forecast, and a temperature trend chart. You’ll also see alerts for extreme weather conditions.', true);
             } else if (userMessage.includes('weather in')) {
@@ -354,7 +457,6 @@
                     if (weatherData) {
                         addMessage(`The weather in ${weatherData.name}, ${weatherData.sys.country} is ${weatherData.weather[0].description} with a temperature of ${weatherData.main.temp}°C, humidity at ${weatherData.main.humidity}%, and wind speed of ${weatherData.wind.speed} m/s.`, true);
                     } else {
-                        // Suggest alternative cities
                         const suggestions = suggestCities(city);
                         addMessage(`Sorry, I couldn’t find ${city}. Did you mean one of these? ${suggestions.join(', ')}`, true);
                     }
@@ -376,7 +478,6 @@
             }
         }
 
-        // Suggest alternative cities for failed searches
         function suggestCities(city) {
             const cityMap = {
                 'lndon': 'London',
