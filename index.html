@@ -3,21 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weather App</title>
+    <meta name="description" content="WeatherHub - Check current weather and 5-day forecast for any city. Features geolocation, dark mode, and a helpful chatbot.">
+    <meta name="keywords" content="weather, forecast, current weather, geolocation, dark mode, chatbot">
+    <meta name="author" content="Akhash">
+    <!-- Open Graph Meta Tags for Social Sharing -->
+    <meta property="og:title" content="WeatherHub - Your Weather Companion">
+    <meta property="og:description" content="Get current weather and 5-day forecasts for any city with WeatherHub. Features geolocation, dark mode, and a chatbot.">
+    <meta property="og:image" content="https://akhash147.github.io/weatherhub/background.jpg">
+    <meta property="og:url" content="https://akhash147.github.io/weatherhub">
+    <meta property="og:type" content="website">
+    <title>WeatherHub</title>
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <!-- Favicon (replace with your own favicon file) -->
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
+    <!-- Dark Mode Toggle -->
+    <button class="dark-mode-toggle" onclick="toggleDarkMode()" title="Toggle Dark Mode" tabindex="0">
+        <span class="dark-mode-icon">🌙</span>
+    </button>
+
     <div class="container">
-        <h1>Weather App</h1>
+        <h1>WeatherHub</h1>
         <div class="search-box">
-            <input type="text" id="cityInput" placeholder="Enter city name">
-            <button onclick="getWeather()">Get Weather</button>
+            <input type="text" id="cityInput" placeholder="Enter city name" tabindex="0">
+            <button onclick="getWeather()" tabindex="0">Get Weather</button>
+            <button onclick="getWeatherByLocation()" class="geo-button" title="Get weather for your location" tabindex="0">
+                <span>📍</span> Use My Location
+            </button>
         </div>
         <div class="error" id="error"></div>
         <div class="loading" id="loading">Loading...</div>
+        <!-- Weather Alerts -->
+        <div class="weather-alert" id="weatherAlert"></div>
         <div class="weather-info" id="weatherInfo">
             <div class="weather-header">
                 <h2 id="cityName"></h2>
@@ -29,54 +52,92 @@
                 <p id="humidity"><span class="icon">💧</span></p>
                 <p id="wind"><span class="icon">💨</span></p>
             </div>
+            <!-- 5-Day Forecast -->
+            <div class="forecast" id="forecast">
+                <h3>5-Day Forecast</h3>
+                <div class="forecast-container" id="forecastContainer"></div>
+            </div>
+            <!-- Temperature Trend Chart -->
+            <div class="chart-container">
+                <h3>Temperature Trend (5 Days)</h3>
+                <canvas id="tempChart"></canvas>
+            </div>
         </div>
     </div>
 
+    <!-- Chatbot UI -->
+    <div class="chatbot-container">
+        <div class="chatbot-toggle" onclick="toggleChatbot()" tabindex="0">
+            <span>💬</span> Chat Support
+        </div>
+        <div class="chatbot-window" id="chatbotWindow">
+            <div class="chatbot-header">
+                <h3>WeatherBot</h3>
+                <button onclick="toggleChatbot()" tabindex="0">✖</button>
+            </div>
+            <div class="chatbot-messages" id="chatbotMessages">
+                <div class="message bot-message">Hello! I'm WeatherBot. How can I help you today? Type "help" for assistance.</div>
+            </div>
+            <div class="chatbot-input">
+                <input type="text" id="chatbotInput" placeholder="Type your message..." onkeypress="if(event.key === 'Enter') sendMessage()" tabindex="0">
+                <button onclick="sendMessage()" tabindex="0">Send</button>
+            </div>
+        </div>
+    </div>
+
+    
     <script>
-        async function getWeather() {
-            const cityInput = document.getElementById('cityInput').value.trim();
-            const apiKey = 'bd5e378503939ddaee76f12ad7a97608'; // Your OpenWeatherMap API key
-            const url = `https://api.openweathermap.org/data/2.5/weather?q=${cityInput}&appid=${apiKey}&units=metric`;
+        let tempChart = null; // Global variable for Chart.js instance
+
+        // Load dark mode preference from localStorage
+        if (localStorage.getItem('darkMode') === 'enabled') {
+            document.body.classList.add('dark-mode');
+            document.querySelector('.dark-mode-icon').textContent = '☀️';
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            const isDarkMode = document.body.classList.contains('dark-mode');
+            document.querySelector('.dark-mode-icon').textContent = isDarkMode ? '☀️' : '🌙';
+            localStorage.setItem('darkMode', isDarkMode ? 'enabled' : 'disabled');
+            updateChartTheme(); // Update chart colors for dark mode
+        }
+
+        async function getWeather(city = null, lat = null, lon = null) {
+            const cityInput = city || document.getElementById('cityInput').value.trim();
+            const apiKey = 'bd5e378503939ddaee76f12ad7a97608';
+            let url = lat && lon 
+                ? `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`
+                : `https://api.openweathermap.org/data/2.5/weather?q=${cityInput}&appid=${apiKey}&units=metric`;
 
             const errorElement = document.getElementById('error');
             const weatherInfoElement = document.getElementById('weatherInfo');
             const loadingElement = document.getElementById('loading');
+            const alertElement = document.getElementById('weatherAlert');
 
-            // Reset UI
             errorElement.classList.remove('show');
             weatherInfoElement.classList.remove('show');
+            alertElement.classList.remove('show');
             loadingElement.classList.add('show');
 
-            if (!cityInput) {
-                errorElement.textContent = 'Please enter a city name.';
+            if (!cityInput && !lat && !lon) {
+                errorElement.textContent = 'Please enter a city name or allow location access.';
                 errorElement.classList.add('show');
                 loadingElement.classList.remove('show');
-                return;
+                return null;
             }
 
             try {
-                console.log('Fetching weather for:', cityInput);
-                console.log('API URL:', url.replace(apiKey, 'HIDDEN_FOR_LOG'));
                 const response = await fetch(url);
-                console.log('Response status:', response.status);
-
                 if (!response.ok) {
                     const errorData = await response.json();
-                    console.error('API Error:', errorData);
-                    if (response.status === 401) {
-                        throw new Error('Invalid API key. Please verify your API key.');
-                    } else if (response.status === 404) {
-                        throw new Error('City not found. Please check the city name.');
-                    } else if (response.status === 429) {
-                        throw new Error('API rate limit exceeded. Please wait a minute and try again.');
-                    } else {
-                        throw new Error(`API error: ${errorData.message || 'Unknown error'}`);
-                    }
+                    if (response.status === 401) throw new Error('Invalid API key.');
+                    if (response.status === 404) throw new Error('City not found.');
+                    if (response.status === 429) throw new Error('API rate limit exceeded.');
+                    throw new Error(`API error: ${errorData.message || 'Unknown error'}`);
                 }
 
                 const data = await response.json();
-                console.log('API Response:', data);
-
                 document.getElementById('cityName').textContent = `${data.name}, ${data.sys.country}`;
                 document.getElementById('weatherIcon').src = `https://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`;
                 document.getElementById('temperature').innerHTML = `<span class="icon">🌡️</span> Temperature: ${data.main.temp}°C`;
@@ -84,23 +145,256 @@
                 document.getElementById('humidity').innerHTML = `<span class="icon">💧</span> Humidity: ${data.main.humidity}%`;
                 document.getElementById('wind').innerHTML = `<span class="icon">💨</span> Wind Speed: ${data.wind.speed} m/s`;
 
+                // Check for weather alerts
+                let alertMessage = '';
+                if (data.main.temp > 40) alertMessage = '⚠️ Extreme Heat Warning: Temperature exceeds 40°C!';
+                else if (data.main.temp < 0) alertMessage = '⚠️ Freezing Warning: Temperature below 0°C!';
+                else if (data.wind.speed > 15) alertMessage = '⚠️ High Wind Warning: Wind speed exceeds 15 m/s!';
+                if (alertMessage) {
+                    alertElement.textContent = alertMessage;
+                    alertElement.classList.add('show');
+                }
+
                 weatherInfoElement.classList.add('show');
                 loadingElement.classList.remove('show');
+
+                // Fetch 5-day forecast
+                await getForecast(data.name);
+                return data;
             } catch (error) {
-                console.error('Error fetching weather:', error);
                 errorElement.textContent = error.message;
                 errorElement.classList.add('show');
                 loadingElement.classList.remove('show');
                 document.getElementById('cityInput').value = '';
+                return null;
             }
         }
 
-        // Allow pressing Enter to trigger weather fetch
+        async function getForecast(city) {
+            const apiKey = 'bd5e378503939ddaee76f12ad7a97608';
+            const url = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${apiKey}&units=metric`;
+            const forecastContainer = document.getElementById('forecastContainer');
+            forecastContainer.innerHTML = ''; // Clear previous forecast
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Unable to fetch forecast.');
+
+                const data = await response.json();
+                const dailyData = [];
+                const temperatures = [];
+                const dates = [];
+
+                // Process data to get one entry per day (e.g., at 12:00)
+                for (let i = 0; i < data.list.length; i += 8) { // 8 entries per day (3-hour intervals)
+                    const entry = data.list[i];
+                    const date = new Date(entry.dt * 1000).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                    dailyData.push({
+                        date: date,
+                        temp: entry.main.temp,
+                        icon: entry.weather[0].icon,
+                        description: entry.weather[0].description
+                    });
+                    temperatures.push(entry.main.temp);
+                    dates.push(date);
+                }
+
+                // Display forecast cards
+                dailyData.forEach(day => {
+                    const forecastCard = document.createElement('div');
+                    forecastCard.classList.add('forecast-card');
+                    forecastCard.innerHTML = `
+                        <h4>${day.date}</h4>
+                        <img src="https://openweathermap.org/img/wn/${day.icon}.png" alt="Weather Icon">
+                        <p>${day.temp}°C</p>
+                        <p>${day.description}</p>
+                    `;
+                    forecastContainer.appendChild(forecastCard);
+                });
+
+                // Update temperature trend chart
+                updateTemperatureChart(dates, temperatures);
+            } catch (error) {
+                console.error('Error fetching forecast:', error);
+            }
+        }
+
+        function updateTemperatureChart(dates, temperatures) {
+            const ctx = document.getElementById('tempChart').getContext('2d');
+            const isDarkMode = document.body.classList.contains('dark-mode');
+
+            // Destroy existing chart if it exists
+            if (tempChart) tempChart.destroy();
+
+            tempChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [{
+                        label: 'Temperature (°C)',
+                        data: temperatures,
+                        borderColor: isDarkMode ? '#b565d9' : '#4a90e2',
+                        backgroundColor: isDarkMode ? 'rgba(181, 101, 217, 0.2)' : 'rgba(74, 144, 226, 0.2)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: {
+                                display: true,
+                                text: 'Temperature (°C)',
+                                color: isDarkMode ? '#ddd' : '#333'
+                            },
+                            ticks: {
+                                color: isDarkMode ? '#ddd' : '#333'
+                            },
+                            grid: {
+                                color: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Date',
+                                color: isDarkMode ? '#ddd' : '#333'
+                            },
+                            ticks: {
+                                color: isDarkMode ? '#ddd' : '#333'
+                            },
+                            grid: {
+                                color: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: isDarkMode ? '#ddd' : '#333'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateChartTheme() {
+            const weatherInfoElement = document.getElementById('weatherInfo');
+            if (weatherInfoElement.classList.contains('show')) {
+                const city = document.getElementById('cityName').textContent.split(',')[0];
+                getForecast(city); // Redraw chart with updated theme
+            }
+        }
+
+        function getWeatherByLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
+                        getWeather(null, lat, lon);
+                    },
+                    (error) => {
+                        const errorElement = document.getElementById('error');
+                        errorElement.textContent = 'Unable to access location. Please enter a city name.';
+                        errorElement.classList.add('show');
+                        document.getElementById('loading').classList.remove('show');
+                    }
+                );
+            } else {
+                const errorElement = document.getElementById('error');
+                errorElement.textContent = 'Geolocation is not supported by your browser.';
+                errorElement.classList.add('show');
+                document.getElementById('loading').classList.remove('show');
+            }
+        }
+
         document.getElementById('cityInput').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') {
                 getWeather();
             }
         });
+
+        // Chatbot functionality
+        function toggleChatbot() {
+            const chatbotWindow = document.getElementById('chatbotWindow');
+            chatbotWindow.classList.toggle('show');
+        }
+
+        function addMessage(content, isBot = false) {
+            const messagesContainer = document.getElementById('chatbotMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+            messageDiv.classList.add(isBot ? 'bot-message' : 'user-message');
+            messageDiv.textContent = content;
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('chatbotInput');
+            const userMessage = input.value.trim().toLowerCase();
+            if (!userMessage) return;
+
+            addMessage(userMessage, false);
+            input.value = '';
+
+            if (userMessage.includes('how do i use') || userMessage.includes('help')) {
+                addMessage('To use WeatherHub, enter a city name and click "Get Weather" or press Enter. You can also click "Use My Location" to get weather for your current location. The app shows current weather, a 5-day forecast, and a temperature trend chart. Toggle dark mode with the button in the top-right corner.', true);
+            } else if (userMessage.includes('what data') || userMessage.includes('what information')) {
+                addMessage('The app displays the city name, country, temperature (°C), weather description, humidity (%), wind speed (m/s), a 5-day forecast, and a temperature trend chart. You’ll also see alerts for extreme weather conditions.', true);
+            } else if (userMessage.includes('weather in')) {
+                const cityMatch = userMessage.match(/weather in ([\w\s]+)/);
+                if (cityMatch && cityMatch[1]) {
+                    const city = cityMatch[1].trim();
+                    addMessage(`Fetching weather for ${city}...`, true);
+                    const weatherData = await getWeather(city);
+                    if (weatherData) {
+                        addMessage(`The weather in ${weatherData.name}, ${weatherData.sys.country} is ${weatherData.weather[0].description} with a temperature of ${weatherData.main.temp}°C, humidity at ${weatherData.main.humidity}%, and wind speed of ${weatherData.wind.speed} m/s.`, true);
+                    } else {
+                        // Suggest alternative cities
+                        const suggestions = suggestCities(city);
+                        addMessage(`Sorry, I couldn’t find ${city}. Did you mean one of these? ${suggestions.join(', ')}`, true);
+                    }
+                } else {
+                    addMessage('Please specify a city (e.g., "weather in London").', true);
+                }
+            } else if (userMessage.includes('hi') || userMessage.includes('hello')) {
+                addMessage('Hello! I’m WeatherBot. I can help you use WeatherHub or fetch weather data for a city. What would you like to do?', true);
+            } else if (userMessage.includes('temperature unit')) {
+                addMessage('The temperature is displayed in Celsius (°C).', true);
+            } else if (userMessage.includes('forecast')) {
+                addMessage('After searching for a city, you’ll see a 5-day forecast below the current weather. It includes the date, temperature, and weather conditions for each day.', true);
+            } else if (userMessage.includes('dark mode')) {
+                addMessage('You can toggle dark mode using the button in the top-right corner (🌙 or ☀️). Your preference is saved automatically.', true);
+            } else if (userMessage.includes('my location')) {
+                addMessage('Click the "Use My Location" button (📍) to get the weather for your current location. Make sure to allow location access when prompted.', true);
+            } else {
+                addMessage('I’m not sure how to help with that. Try asking "how do I use this?", "weather in London", or "what data is shown?".', true);
+            }
+        }
+
+        // Suggest alternative cities for failed searches
+        function suggestCities(city) {
+            const cityMap = {
+                'lndon': 'London',
+                'paris': 'Paris',
+                'new yrok': 'New York',
+                'tokoyo': 'Tokyo',
+                'mumbay': 'Mumbai',
+                'sidney': 'Sydney'
+            };
+            const suggestions = [];
+            const cityLower = city.toLowerCase();
+            for (const key in cityMap) {
+                if (key.includes(cityLower) || cityLower.includes(key)) {
+                    suggestions.push(cityMap[key]);
+                }
+            }
+            return suggestions.length ? suggestions : ['London', 'Paris', 'New York'];
+        }
     </script>
 </body>
 </html>
