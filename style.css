@@ -538,11 +538,13 @@ footer {
     width: 100%;
     background: rgba(255, 255, 255, 0.9);
     padding: 10px;
+    padding-bottom: 50px; /* Increased padding to make space for the chat button on mobile */
     text-align: center;
     font-size: 0.9em;
     color: #34495e;
     border-top: 1px solid #ddd;
     transition: background 0.3s, color 0.3s;
+    z-index: 999; /* Ensure footer is below the chat button */
 }
 
 body.dark-mode footer {
@@ -598,11 +600,8 @@ footer a:hover {
         font-size: 0.9em;
     }
 
-    .chatbot-window {
-        width: 90%;
-        height: 350px;
-        right: 5%;
-        bottom: 60px;
+    .chatbot-container {
+        bottom: 50px; /* Move the chat button higher to avoid overlapping the footer */
     }
 
     .chatbot-toggle {
@@ -610,8 +609,16 @@ footer a:hover {
         padding: 8px 15px;
     }
 
+    .chatbot-window {
+        width: 90%;
+        height: 350px;
+        right: 5%;
+        bottom: 60px;
+    }
+
     footer {
         font-size: 0.8em;
         padding: 8px;
+        padding-bottom: 50px; /* Ensure padding is applied on mobile */
     }
 }
