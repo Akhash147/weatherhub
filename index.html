@@ -11,7 +11,7 @@
     <meta property="og:image" content="https://akhash147.github.io/weatherhub/background.jpg">
     <meta property="og:url" content="https://akhash147.github.io/weatherhub">
     <meta property="og:type" content="website">
-    <title>WeatherHub</title>
+    <title data-translate="title">WeatherHub</title>
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,24 +20,32 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <button class="dark-mode-toggle" onclick="toggleDarkMode()" title="Toggle Dark Mode" tabindex="0">
-        <span class="dark-mode-icon">🌙</span>
-    </button>
+    <div class="top-bar">
+        <button class="dark-mode-toggle" onclick="toggleDarkMode()" title="Toggle Dark Mode" tabindex="0">
+            <span class="dark-mode-icon">🌙</span>
+        </button>
+        <select id="languageSelect" onchange="changeLanguage()" tabindex="0">
+            <option value="en">English</option>
+            <option value="ta">Tamil</option>
+            <option value="de">German</option>
+            <option value="hi">Hindi</option>
+        </select>
+    </div>
 
     <div class="container">
-        <h1>WeatherHub</h1>
+        <h1 data-translate="heading">WeatherHub</h1>
         <div class="search-box">
             <div class="autocomplete-wrapper">
-                <input type="text" id="cityInput" placeholder="Enter city name" tabindex="0" oninput="debouncedShowSuggestions()" autocomplete="off">
+                <input type="text" id="cityInput" placeholder="Enter city name" data-translate="cityInputPlaceholder" tabindex="0" oninput="debouncedShowSuggestions()" autocomplete="off">
                 <div class="suggestions" id="suggestions"></div>
             </div>
-            <button onclick="getWeather()" tabindex="0">Get Weather</button>
-            <button onclick="getWeatherByLocation()" class="geo-button" title="Get weather for your location" tabindex="0">
-                <span>📍</span> Use My Location
+            <button onclick="getWeather()" data-translate="getWeatherBtn" tabindex="0">Get Weather</button>
+            <button onclick="getWeatherByLocation()" class="geo-button" title="Get weather for your location" data-translate="useMyLocationBtn" tabindex="0">
+                <span>📍</span> <span data-translate="useMyLocationText">Use My Location</span>
             </button>
         </div>
-        <div class="error" id="error"></div>
-        <div class="loading" id="loading">Loading...</div>
+        <div class="error" id="error" data-translate="error"></div>
+        <div class="loading" id="loading" data-translate="loading">Loading...</div>
         <div class="weather-alert" id="weatherAlert"></div>
         <div class="weather-info" id="weatherInfo">
             <div class="weather-header">
@@ -45,17 +53,17 @@
                 <img id="weatherIcon" src="" alt="Weather Icon">
             </div>
             <div class="weather-details">
-                <p id="temperature"><span class="icon">🌡️</span></p>
+                <p id="temperature"><span class="icon">🌡️</span> <span data-translate="temperatureLabel">Temperature</span>: <span id="tempValue"></span></p>
                 <p id="description"></p>
-                <p id="humidity"><span class="icon">💧</span></p>
-                <p id="wind"><span class="icon">💨</span></p>
+                <p id="humidity"><span class="icon">💧</span> <span data-translate="humidityLabel">Humidity</span>: <span id="humidityValue"></span></p>
+                <p id="wind"><span class="icon">💨</span> <span data-translate="windLabel">Wind Speed</span>: <span id="windValue"></span></p>
             </div>
             <div class="forecast" id="forecast">
-                <h3>5-Day Forecast</h3>
+                <h3 data-translate="forecastHeading">5-Day Forecast</h3>
                 <div class="forecast-container" id="forecastContainer"></div>
             </div>
             <div class="chart-container">
-                <h3>Temperature Trend (5 Days)</h3>
+                <h3 data-translate="chartTitle">Temperature Trend (5 Days)</h3>
                 <canvas id="tempChart"></canvas>
             </div>
         </div>
@@ -63,32 +71,162 @@
 
     <div class="chatbot-container">
         <div class="chatbot-toggle" onclick="toggleChatbot()" tabindex="0">
-            <span>💬</span> Chat Support
+            <span>💬</span> <span data-translate="chatSupport">Chat Support</span>
         </div>
         <div class="chatbot-window" id="chatbotWindow">
             <div class="chatbot-header">
-                <h3>WeatherBot</h3>
+                <h3 data-translate="chatbotHeader">WeatherBot</h3>
                 <button onclick="toggleChatbot()" tabindex="0">✖</button>
             </div>
             <div class="chatbot-messages" id="chatbotMessages">
-                <div class="message bot-message">Hello! I'm WeatherBot. How can I help you today? Type "help" for assistance.</div>
+                <div class="message bot-message" data-translate="chatbotWelcome">Hello! I'm WeatherBot. How can I help you today? Type "help" for assistance.</div>
             </div>
             <div class="chatbot-input">
-                <input type="text" id="chatbotInput" placeholder="Type your message..." onkeypress="if(event.key === 'Enter') sendMessage()" tabindex="0">
-                <button onclick="sendMessage()" tabindex="0">Send</button>
+                <input type="text" id="chatbotInput" placeholder="Type your message..." data-translate="chatbotInputPlaceholder" onkeypress="if(event.key === 'Enter') sendMessage()" tabindex="0">
+                <button onclick="sendMessage()" data-translate="chatbotSendBtn" tabindex="0">Send</button>
             </div>
         </div>
     </div>
 
-    <footer>
-        Weather data provided by <a href="https://openweathermap.org" target="_blank">OpenWeatherMap</a> | Built by <a href="https://github.com/Akhash147" target="_blank">Akhash</a>
-    </footer>
-
     <script>
         let tempChart = null;
         let cities = [];
+        let currentLanguage = 'en';
 
-        // Fallback list of cities (in case the dataset fails to load)
+        // Translation object
+        const translations = {
+            en: {
+                title: "WeatherHub",
+                heading: "WeatherHub",
+                cityInputPlaceholder: "Enter city name",
+                getWeatherBtn: "Get Weather",
+                useMyLocationBtn: "Get weather for your location", // For title attribute
+                useMyLocationText: "Use My Location",
+                error: "",
+                loading: "Loading...",
+                temperatureLabel: "Temperature",
+                humidityLabel: "Humidity",
+                windLabel: "Wind Speed",
+                forecastHeading: "5-Day Forecast",
+                chartTitle: "Temperature Trend (5 Days)",
+                chatSupport: "Chat Support",
+                chatbotHeader: "WeatherBot",
+                chatbotWelcome: "Hello! I'm WeatherBot. How can I help you today? Type 'help' for assistance.",
+                chatbotInputPlaceholder: "Type your message...",
+                chatbotSendBtn: "Send",
+                // Chatbot responses
+                chatbotHelp: "To use WeatherHub, start typing a city name in the search bar to see suggestions, then click 'Get Weather' or press Enter. You can also click 'Use My Location' to get weather for your current location. The app shows current weather, a 5-day forecast, and a temperature trend chart. Toggle dark mode with the button in the top-right corner.",
+                chatbotData: "The app displays the city name, country, temperature (°C), weather description, humidity (%), wind speed (m/s), a 5-day forecast, and a temperature trend chart. You’ll also see alerts for extreme weather conditions.",
+                chatbotFetching: "Fetching weather for {city}...",
+                chatbotWeather: "The weather in {city}, {country} is {description} with a temperature of {temp}°C, humidity at {humidity}%, and wind speed of {wind} m/s.",
+                chatbotNotFound: "Sorry, I couldn’t find {city}. Did you mean one of these? {suggestions}",
+                chatbotSpecifyCity: "Please specify a city (e.g., 'weather in London').",
+                chatbotHello: "Hello! I’m WeatherBot. I can help you use WeatherHub or fetch weather data for a city. What would you like to do?",
+                chatbotTempUnit: "The temperature is displayed in Celsius (°C).",
+                chatbotForecast: "After searching for a city, you’ll see a 5-day forecast below the current weather. It includes the date, temperature, and weather conditions for each day.",
+                chatbotDarkMode: "You can toggle dark mode using the button in the top-right corner (🌙 or ☀️). Your preference is saved automatically.",
+                chatbotMyLocation: "Click the 'Use My Location' button (📍) to get the weather for your current location. Make sure to allow location access when prompted.",
+                chatbotUnknown: "I’m not sure how to help with that. Try asking 'how do I use this?', 'weather in London', or 'what data is shown?'."
+            },
+            ta: {
+                title: "வெதர்ஹப்",
+                heading: "வெதர்ஹப்",
+                cityInputPlaceholder: "நகரத்தின் பெயரை உள்ளிடவும்",
+                getWeatherBtn: "வானிலை பெறு",
+                useMyLocationBtn: "உங்கள் இருப்பிடத்திற்கான வானிலையைப் பெறவும்",
+                useMyLocationText: "என் இருப்பிடத்தைப் பயன்படுத்து",
+                error: "",
+                loading: "ஏற்றுகிறது...",
+                temperatureLabel: "வெப்பநிலை",
+                humidityLabel: "ஈரப்பதம்",
+                windLabel: "காற்று வேகம்",
+                forecastHeading: "5-நாள் முன்னறிவிப்பு",
+                chartTitle: "வெப்பநிலை போக்கு (5 நாட்கள்)",
+                chatSupport: "அரட்டை ஆதரவு",
+                chatbotHeader: "வெதர்பாட்",
+                chatbotWelcome: "வணக்கம்! நான் வெதர்பாட். இன்று உங்களுக்கு எப்படி உதவ முடியும்? உதவிக்கு 'help' என தட்டச்சு செய்யவும்.",
+                chatbotInputPlaceholder: "உங்கள் செய்தியை தட்டச்சு செய்யவும்...",
+                chatbotSendBtn: "அனுப்பு",
+                chatbotHelp: "வெதர்ஹப்பைப் பயன்படுத்த, தேடல் பட்டியில் நகரத்தின் பெயரைத் தட்டச்சு செய்யத் தொடங்குங்கள், பின்னர் 'வானிலை பெறு' என்பதைக் கிளிக் செய்யவும் அல்லது Enter ஐ அழுத்தவும். உங்கள் தற்போதைய இருப்பிடத்திற்கான வானிலையைப் பெற 'என் இருப்பிடத்தைப் பயன்படுத்து' என்பதைக் கிளிக் செய்யலாம். இந்த பயன்பாடு தற்போதைய வானிலை, 5-நாள் முன்னறிவிப்பு மற்றும் வெப்பநிலை போக்கு விளக்கப்படத்தைக் காட்டுகிறது. மேல்-வலது மூலையில் உள்ள பொத்தானைப் பயன்படுத்தி இருண்ட பயன்முறையை மாற்றவும்.",
+                chatbotData: "பயன்பாடு நகரத்தின் பெயர், நாடு, வெப்பநிலை (°C), வானிலை விளக்கம், ஈரப்பதம் (%), காற்று வேகம் (மீ/வி), 5-நாள் முன்னறிவிப்பு மற்றும் வெப்பநிலை போக்கு விளக்கப்படத்தைக் காட்டுகிறது. தீவிர வானிலை நிலைகளுக்கு எச்சரிக்கைகளையும் நீங்கள் பார்ப்பீர்கள்.",
+                chatbotFetching: "{city}க்கான வானிலையைப் பெறுகிறது...",
+                chatbotWeather: "{city}, {country} இல் வானிலை {description} ஆக உள்ளது, வெப்பநிலை {temp}°C, ஈரப்பதம் {humidity}%, மற்றும் காற்று வேகம் {wind} மீ/வி.",
+                chatbotNotFound: "மன்னிக்கவும், {city} ஐக் கண்டுபிடிக்க முடியவில்லை. இவற்றில் ஒன்றை நீங்கள் குறிப்பிட்டீர்களா? {suggestions}",
+                chatbotSpecifyCity: "தயவுசெய்து ஒரு நகரத்தைக் குறிப்பிடவும் (எ.கா., 'லண்டனில் வானிலை').",
+                chatbotHello: "வணக்கம்! நான் வெதர்பாட். வெதர்ஹப்பைப் பயன்படுத்த உங்களுக்கு உதவலாம் அல்லது ஒரு நகரத்திற்கான வானிலை தரவைப் பெறலாம். நீங்கள் என்ன செய்ய விரும்புகிறீர்கள்?",
+                chatbotTempUnit: "வெப்பநிலை செல்சியஸ் (°C) இல் காட்டப்படுகிறது.",
+                chatbotForecast: "ஒரு நகரத்தைத் தேடிய பிறகு, தற்போதைய வானிலைக்கு கீழே 5-நாள் முன்னறிவிப்பைப் பார்ப்பீர்கள். இது தேதி, வெப்பநிலை மற்றும் ஒவ்வொரு நாளுக்கான வானிலை நிலைகளை உள்ளடக்கியது.",
+                chatbotDarkMode: "மேல்-வலது மூலையில் உள்ள பொத்தானை (🌙 அல்லது ☀️) பயன்படுத்தி இருண்ட பயன்முறையை மாற்றலாம். உங்கள் விருப்பம் தானாகவே சேமிக்கப்படும்.",
+                chatbotMyLocation: "'என் இருப்பிடத்தைப் பயன்படுத்து' பொத்தானை (📍) கிளிக் செய்யவும், உங்கள் தற்போதைய இருப்பிடத்திற்கான வானிலையைப் பெற. அனுமதி கேட்கும்போது இருப்பிட அணுகலை அனுமதிக்கவும்.",
+                chatbotUnknown: "அதை எப்படி உதவுவது என்று எனக்குத் தெரியவில்லை. 'இதை எப்படி பயன்படுத்துவது?', 'லண்டனில் வானிலை', அல்லது 'என்ன தரவு காட்டப்படுகிறது?' என்று கேட்டுப் பாருங்கள்."
+            },
+            de: {
+                title: "WeatherHub",
+                heading: "WeatherHub",
+                cityInputPlaceholder: "Stadtname eingeben",
+                getWeatherBtn: "Wetter abrufen",
+                useMyLocationBtn: "Wetter für Ihren Standort abrufen",
+                useMyLocationText: "Meinen Standort verwenden",
+                error: "",
+                loading: "Laden...",
+                temperatureLabel: "Temperatur",
+                humidityLabel: "Luftfeuchtigkeit",
+                windLabel: "Windgeschwindigkeit",
+                forecastHeading: "5-Tage-Vorhersage",
+                chartTitle: "Temperaturverlauf (5 Tage)",
+                chatSupport: "Chat-Unterstützung",
+                chatbotHeader: "WeatherBot",
+                chatbotWelcome: "Hallo! Ich bin WeatherBot. Wie kann ich Ihnen heute helfen? Geben Sie 'help' ein, um Unterstützung zu erhalten.",
+                chatbotInputPlaceholder: "Nachricht eingeben...",
+                chatbotSendBtn: "Senden",
+                chatbotHelp: "Um WeatherHub zu nutzen, beginnen Sie, einen Stadtnamen in die Suchleiste einzugeben, um Vorschläge zu sehen, und klicken Sie dann auf 'Wetter abrufen' oder drücken Sie Enter. Sie können auch auf 'Meinen Standort verwenden' klicken, um das Wetter für Ihren aktuellen Standort abzurufen. Die App zeigt das aktuelle Wetter, eine 5-Tage-Vorhersage und ein Diagramm zum Temperaturverlauf an. Wechseln Sie den Dunkelmodus mit dem Button in der oberen rechten Ecke.",
+                chatbotData: "Die App zeigt den Stadtnamen, das Land, die Temperatur (°C), die Wetterbeschreibung, die Luftfeuchtigkeit (%), die Windgeschwindigkeit (m/s), eine 5-Tage-Vorhersage und ein Diagramm zum Temperaturverlauf an. Sie sehen auch Warnungen bei extremen Wetterbedingungen.",
+                chatbotFetching: "Wetter für {city} wird abgerufen...",
+                chatbotWeather: "Das Wetter in {city}, {country} ist {description} mit einer Temperatur von {temp}°C, einer Luftfeuchtigkeit von {humidity}% und einer Windgeschwindigkeit von {wind} m/s.",
+                chatbotNotFound: "Es tut mir leid, ich konnte {city} nicht finden. Meinen Sie vielleicht eine dieser Städte? {suggestions}",
+                chatbotSpecifyCity: "Bitte geben Sie eine Stadt an (z. B. 'Wetter in London').",
+                chatbotHello: "Hallo! Ich bin WeatherBot. Ich kann Ihnen helfen, WeatherHub zu nutzen oder Wetterdaten für eine Stadt abzurufen. Was möchten Sie tun?",
+                chatbotTempUnit: "Die Temperatur wird in Celsius (°C) angezeigt.",
+                chatbotForecast: "Nach der Suche nach einer Stadt sehen Sie unter dem aktuellen Wetter eine 5-Tage-Vorhersage. Diese enthält das Datum, die Temperatur und die Wetterbedingungen für jeden Tag.",
+                chatbotDarkMode: "Sie können den Dunkelmodus mit dem Button in der oberen rechten Ecke (🌙 oder ☀️) umschalten. Ihre Einstellung wird automatisch gespeichert.",
+                chatbotMyLocation: "Klicken Sie auf den Button 'Meinen Standort verwenden' (📍), um das Wetter für Ihren aktuellen Standort abzurufen. Stellen Sie sicher, dass Sie den Standortzugriff erlauben, wenn Sie dazu aufgefordert werden.",
+                chatbotUnknown: "Ich bin mir nicht sicher, wie ich Ihnen helfen kann. Versuchen Sie, 'Wie benutze ich das?', 'Wetter in London' oder 'Welche Daten werden angezeigt?' zu fragen."
+            },
+            hi: {
+                title: "वेदरहब",
+                heading: "वेदरहब",
+                cityInputPlaceholder: "शहर का नाम दर्ज करें",
+                getWeatherBtn: "मौसम प्राप्त करें",
+                useMyLocationBtn: "अपने स्थान के लिए मौसम प्राप्त करें",
+                useMyLocationText: "मेरा स्थान उपयोग करें",
+                error: "",
+                loading: "लोड हो रहा है...",
+                temperatureLabel: "तापमान",
+                humidityLabel: "नमी",
+                windLabel: "हवा की गति",
+                forecastHeading: "5-दिन का पूर्वानुमान",
+                chartTitle: "तापमान प्रवृत्ति (5 दिन)",
+                chatSupport: "चैट समर्थन",
+                chatbotHeader: "वेदरबॉट",
+                chatbotWelcome: "नमस्ते! मैं वेदरबॉट हूँ। मैं आपकी आज कैसे मदद कर सकता हूँ? सहायता के लिए 'help' टाइप करें।",
+                chatbotInputPlaceholder: "अपना संदेश टाइप करें...",
+                chatbotSendBtn: "भेजें",
+                chatbotHelp: "वेदरहब का उपयोग करने के लिए, सर्च बार में शहर का नाम टाइप शुरू करें ताकि सुझाव देखें, फिर 'मौसम प्राप्त करें' पर क्लिक करें या Enter दबाएं। आप अपने वर्तमान स्थान के लिए मौसम प्राप्त करने के लिए 'मेरा स्थान उपयोग करें' पर भी क्लिक कर सकते हैं। यह ऐप वर्तमान मौसम, 5-दिन का पूर्वानुमान और तापमान प्रवृत्ति चार्ट दिखाता है। ऊपरी-दाएं कोने में बटन का उपयोग करके डार्क मोड टॉगल करें।",
+                chatbotData: "यह ऐप शहर का नाम, देश, तापमान (°C), मौसम विवरण, नमी (%), हवा की गति (मी/से), 5-दिन का पूर्वानुमान और तापमान प्रवृत्ति चार्ट दिखाता है। आपको चरम मौसम स्थितियों के लिए अलर्ट भी दिखाई देंगे।",
+                chatbotFetching: "{city} के लिए मौसम प्राप्त कर रहा है...",
+                chatbotWeather: "{city}, {country} में मौसम {description} है, तापमान {temp}°C, नमी {humidity}% और हवा की गति {wind} मी/से है।",
+                chatbotNotFound: "मुझे खेद है, मैं {city} नहीं ढूंढ सका। क्या आप इनमें से किसी का मतलब ले रहे थे? {suggestions}",
+                chatbotSpecifyCity: "कृपया एक शहर निर्दिष्ट करें (उदाहरण के लिए, 'लंदन में मौसम')।",
+                chatbotHello: "नमस्ते! मैं वेदरबॉट हूँ। मैं आपको वेदरहब का उपयोग करने में मदद कर सकता हूँ या किसी शहर के लिए मौसम डेटा प्राप्त कर सकता हूँ। आप क्या करना चाहते हैं?",
+                chatbotTempUnit: "तापमान सेल्सियस (°C) में प्रदर्शित होता है।",
+                chatbotForecast: "किसी शहर की खोज करने के बाद, आपको वर्तमान मौसम के नीचे 5-दिन का पूर्वानुमान दिखाई देगा। इसमें तारीख, तापमान और प्रत्येक दिन के लिए मौसम की स्थिति शामिल होती है।",
+                chatbotDarkMode: "आप ऊपरी-दाएं कोने में बटन (🌙 या ☀️) का उपयोग करके डार्क मोड टॉगल कर सकते हैं। आपकी प्राथमिकता स्वचालित रूप से सहेजी जाती है।",
+                chatbotMyLocation: "'मेरा स्थान उपयोग करें' बटन (📍) पर क्लिक करें, अपने वर्तमान स्थान के लिए मौसम प्राप्त करने के लिए। सुनिश्चित करें कि जब पूछा जाए तो स्थान पहुँच की अनुमति दें।",
+                chatbotUnknown: "मुझे समझ नहीं आ रहा कि उसमें कैसे मदद करनी है। 'इसे कैसे उपयोग करें?', 'लंदन में मौसम', या 'क्या डेटा दिखाया गया है?' पूछने की कोशिश करें।"
+            }
+        };
+
+        // Fallback list of cities
         const fallbackCities = [
             "London", "Paris", "New York", "Tokyo", "Mumbai", "Sydney",
             "Toronto", "Berlin", "Rome", "Moscow", "Dubai", "Singapore",
@@ -112,7 +250,6 @@
             "Amman", "Beirut", "Tehran", "Baghdad", "Ankara"
         ];
 
-        // Load cities from localStorage or fetch from CDN
         async function loadCities() {
             const storedCities = localStorage.getItem('cityList');
             if (storedCities) {
@@ -121,25 +258,56 @@
             }
 
             try {
-                // Using a CDN-hosted world-cities dataset (~40,000 cities)
                 const response = await fetch('https://raw.githubusercontent.com/lutangar/cities.json/master/cities.json');
                 if (!response.ok) throw new Error('Failed to fetch city list.');
                 
                 const data = await response.json();
-                // Extract city names (data is an array of objects with 'name' and 'country' fields)
-                cities = data.map(city => city.name).filter(name => name); // Remove any undefined/null names
-                cities = [...new Set(cities)]; // Remove duplicates
-                cities.sort(); // Sort alphabetically
-
-                // Store in localStorage for future use
+                cities = data.map(city => city.name).filter(name => name);
+                cities = [...new Set(cities)];
+                cities.sort();
                 localStorage.setItem('cityList', JSON.stringify(cities));
             } catch (error) {
                 console.error('Error loading cities:', error);
-                cities = fallbackCities; // Use fallback list if fetch fails
+                cities = fallbackCities;
             }
         }
 
-        // Debounce function to limit how often showSuggestions is called
+        function changeLanguage() {
+            const lang = document.getElementById('languageSelect').value;
+            currentLanguage = lang;
+            localStorage.setItem('language', lang);
+
+            // Update HTML lang attribute
+            document.documentElement.lang = lang;
+
+            // Update all elements with data-translate attributes
+            document.querySelectorAll('[data-translate]').forEach(element => {
+                const key = element.getAttribute('data-translate');
+                if (key === 'error' && element.textContent && element.textContent !== translations[lang][key]) {
+                    return; // Skip updating error message if it's already set
+                }
+                if (translations[lang][key]) {
+                    if (element.tagName === 'INPUT' && element.hasAttribute('placeholder')) {
+                        element.placeholder = translations[lang][key];
+                    } else if (element.tagName === 'BUTTON' || element.tagName === 'SELECT') {
+                        element.setAttribute('title', translations[lang][key]);
+                    } else {
+                        element.textContent = translations[lang][key];
+                    }
+                }
+            });
+
+            // Update chart title if it exists
+            if (tempChart) {
+                tempChart.options.plugins.title.text = translations[lang].chartTitle;
+                tempChart.update();
+            }
+
+            // Reset chatbot welcome message
+            const chatbotMessages = document.getElementById('chatbotMessages');
+            chatbotMessages.innerHTML = `<div class="message bot-message" data-translate="chatbotWelcome">${translations[lang].chatbotWelcome}</div>`;
+        }
+
         function debounce(func, delay) {
             let timeoutId;
             return function (...args) {
@@ -148,7 +316,6 @@
             };
         }
 
-        // Show suggestions with a limit of 10 matches
         function showSuggestions() {
             const input = document.getElementById('cityInput').value.trim().toLowerCase();
             const suggestionsContainer = document.getElementById('suggestions');
@@ -159,9 +326,8 @@
                 return;
             }
 
-            // Filter cities (case-insensitive, starts with input)
             const filteredCities = cities.filter(city => city.toLowerCase().startsWith(input));
-            const limitedCities = filteredCities.slice(0, 10); // Limit to 10 suggestions
+            const limitedCities = filteredCities.slice(0, 10);
 
             if (limitedCities.length === 0) {
                 suggestionsContainer.style.display = 'none';
@@ -184,7 +350,6 @@
             suggestionsContainer.style.display = 'block';
         }
 
-        // Debounced version of showSuggestions
         const debouncedShowSuggestions = debounce(showSuggestions, 300);
 
         document.addEventListener('click', (e) => {
@@ -195,10 +360,15 @@
             }
         });
 
-        // Load cities when the page loads
         window.onload = async () => {
             await loadCities();
-            // Load dark mode preference after cities are loaded
+            
+            // Load language preference
+            const savedLang = localStorage.getItem('language') || 'en';
+            document.getElementById('languageSelect').value = savedLang;
+            changeLanguage();
+
+            // Load dark mode preference
             if (localStorage.getItem('darkMode') === 'enabled') {
                 document.body.classList.add('dark-mode');
                 document.querySelector('.dark-mode-icon').textContent = '☀️';
@@ -231,7 +401,7 @@
             loadingElement.classList.add('show');
 
             if (!cityInput && !lat && !lon) {
-                errorElement.textContent = 'Please enter a city name or allow location access.';
+                errorElement.textContent = translations[currentLanguage].error || 'Please enter a city name or allow location access.';
                 errorElement.classList.add('show');
                 loadingElement.classList.remove('show');
                 return null;
@@ -250,17 +420,17 @@
                 const data = await response.json();
                 document.getElementById('cityName').textContent = `${data.name}, ${data.sys.country}`;
                 document.getElementById('weatherIcon').src = `https://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`;
-                document.getElementById('temperature').innerHTML = `<span class="icon">🌡️</span> Temperature: ${data.main.temp}°C`;
-                document.getElementById('description').textContent = `Weather: ${data.weather[0].description}`;
-                document.getElementById('humidity').innerHTML = `<span class="icon">💧</span> Humidity: ${data.main.humidity}%`;
-                document.getElementById('wind').innerHTML = `<span class="icon">💨</span> Wind Speed: ${data.wind.speed} m/s`;
+                document.getElementById('tempValue').textContent = `${data.main.temp}°C`;
+                document.getElementById('description').textContent = `Weather: ${data.weather[0].description}`; // Note: API data remains in English
+                document.getElementById('humidityValue').textContent = `${data.main.humidity}%`;
+                document.getElementById('windValue').textContent = `${data.wind.speed} m/s`;
 
                 let alertMessage = '';
                 if (data.main.temp > 40) alertMessage = '⚠️ Extreme Heat Warning: Temperature exceeds 40°C!';
                 else if (data.main.temp < 0) alertMessage = '⚠️ Freezing Warning: Temperature below 0°C!';
                 else if (data.wind.speed > 15) alertMessage = '⚠️ High Wind Warning: Wind speed exceeds 15 m/s!';
                 if (alertMessage) {
-                    alertElement.textContent = alertMessage;
+                    alertElement.textContent = alertMessage; // Alerts remain in English for simplicity
                     alertElement.classList.add('show');
                 }
 
@@ -295,7 +465,7 @@
 
                 for (let i = 0; i < data.list.length; i += 8) {
                     const entry = data.list[i];
-                    const date = new Date(entry.dt * 1000).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                    const date = new Date(entry.dt * 1000).toLocaleDateString(currentLanguage === 'en' ? 'en-US' : currentLanguage, { weekday: 'short', month: 'short', day: 'numeric' });
                     dailyData.push({
                         date: date,
                         temp: entry.main.temp,
@@ -335,7 +505,7 @@
                 data: {
                     labels: dates,
                     datasets: [{
-                        label: 'Temperature (°C)',
+                        label: translations[currentLanguage].temperatureLabel + ' (°C)',
                         data: temperatures,
                         borderColor: isDarkMode ? '#b565d9' : '#4a90e2',
                         backgroundColor: isDarkMode ? 'rgba(181, 101, 217, 0.2)' : 'rgba(74, 144, 226, 0.2)',
@@ -344,12 +514,24 @@
                     }]
                 },
                 options: {
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: translations[currentLanguage].chartTitle,
+                            color: isDarkMode ? '#ddd' : '#333'
+                        },
+                        legend: {
+                            labels: {
+                                color: isDarkMode ? '#ddd' : '#333'
+                            }
+                        }
+                    },
                     scales: {
                         y: {
                             beginAtZero: false,
                             title: {
                                 display: true,
-                                text: 'Temperature (°C)',
+                                text: translations[currentLanguage].temperatureLabel + ' (°C)',
                                 color: isDarkMode ? '#ddd' : '#333'
                             },
                             ticks: {
@@ -370,13 +552,6 @@
                             },
                             grid: {
                                 color: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
-                            }
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            labels: {
-                                color: isDarkMode ? '#ddd' : '#333'
                             }
                         }
                     }
@@ -424,6 +599,9 @@
         function toggleChatbot() {
             const chatbotWindow = document.getElementById('chatbotWindow');
             chatbotWindow.classList.toggle('show');
+            if (chatbotWindow.classList.contains('show')) {
+                document.getElementById('chatbotMessages').innerHTML = `<div class="message bot-message" data-translate="chatbotWelcome">${translations[currentLanguage].chatbotWelcome}</div>`;
+            }
         }
 
         function addMessage(content, isBot = false) {
@@ -445,36 +623,46 @@
             input.value = '';
 
             if (userMessage.includes('how do i use') || userMessage.includes('help')) {
-                addMessage('To use WeatherHub, start typing a city name in the search bar to see suggestions, then click "Get Weather" or press Enter. You can also click "Use My Location" to get weather for your current location. The app shows current weather, a 5-day forecast, and a temperature trend chart. Toggle dark mode with the button in the top-right corner.', true);
+                addMessage(translations[currentLanguage].chatbotHelp, true);
             } else if (userMessage.includes('what data') || userMessage.includes('what information')) {
-                addMessage('The app displays the city name, country, temperature (°C), weather description, humidity (%), wind speed (m/s), a 5-day forecast, and a temperature trend chart. You’ll also see alerts for extreme weather conditions.', true);
+                addMessage(translations[currentLanguage].chatbotData, true);
             } else if (userMessage.includes('weather in')) {
                 const cityMatch = userMessage.match(/weather in ([\w\s]+)/);
                 if (cityMatch && cityMatch[1]) {
                     const city = cityMatch[1].trim();
-                    addMessage(`Fetching weather for ${city}...`, true);
+                    addMessage(translations[currentLanguage].chatbotFetching.replace('{city}', city), true);
                     const weatherData = await getWeather(city);
                     if (weatherData) {
-                        addMessage(`The weather in ${weatherData.name}, ${weatherData.sys.country} is ${weatherData.weather[0].description} with a temperature of ${weatherData.main.temp}°C, humidity at ${weatherData.main.humidity}%, and wind speed of ${weatherData.wind.speed} m/s.`, true);
+                        const message = translations[currentLanguage].chatbotWeather
+                            .replace('{city}', weatherData.name)
+                            .replace('{country}', weatherData.sys.country)
+                            .replace('{description}', weatherData.weather[0].description)
+                            .replace('{temp}', weatherData.main.temp)
+                            .replace('{humidity}', weatherData.main.humidity)
+                            .replace('{wind}', weatherData.wind.speed);
+                        addMessage(message, true);
                     } else {
                         const suggestions = suggestCities(city);
-                        addMessage(`Sorry, I couldn’t find ${city}. Did you mean one of these? ${suggestions.join(', ')}`, true);
+                        const message = translations[currentLanguage].chatbotNotFound
+                            .replace('{city}', city)
+                            .replace('{suggestions}', suggestions.join(', '));
+                        addMessage(message, true);
                     }
                 } else {
-                    addMessage('Please specify a city (e.g., "weather in London").', true);
+                    addMessage(translations[currentLanguage].chatbotSpecifyCity, true);
                 }
             } else if (userMessage.includes('hi') || userMessage.includes('hello')) {
-                addMessage('Hello! I’m WeatherBot. I can help you use WeatherHub or fetch weather data for a city. What would you like to do?', true);
+                addMessage(translations[currentLanguage].chatbotHello, true);
             } else if (userMessage.includes('temperature unit')) {
-                addMessage('The temperature is displayed in Celsius (°C).', true);
+                addMessage(translations[currentLanguage].chatbotTempUnit, true);
             } else if (userMessage.includes('forecast')) {
-                addMessage('After searching for a city, you’ll see a 5-day forecast below the current weather. It includes the date, temperature, and weather conditions for each day.', true);
+                addMessage(translations[currentLanguage].chatbotForecast, true);
             } else if (userMessage.includes('dark mode')) {
-                addMessage('You can toggle dark mode using the button in the top-right corner (🌙 or ☀️). Your preference is saved automatically.', true);
+                addMessage(translations[currentLanguage].chatbotDarkMode, true);
             } else if (userMessage.includes('my location')) {
-                addMessage('Click the "Use My Location" button (📍) to get the weather for your current location. Make sure to allow location access when prompted.', true);
+                addMessage(translations[currentLanguage].chatbotMyLocation, true);
             } else {
-                addMessage('I’m not sure how to help with that. Try asking "how do I use this?", "weather in London", or "what data is shown?".', true);
+                addMessage(translations[currentLanguage].chatbotUnknown, true);
             }
         }
 
